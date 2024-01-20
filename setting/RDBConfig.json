@@ -1,0 +1,10 @@
+{
+    "rdpIp": "192.168.117.128",
+    "rdpPort": ":6379",
+    "password": "",
+    "db": 0,
+    "poolSize": 15,
+    "minIdleConns": 8,
+    "maxIdleConns": 12,
+    "poolTimeOut": 5
+}

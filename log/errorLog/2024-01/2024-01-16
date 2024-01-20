@@ -1,0 +1,14 @@
+errorLog:2024/01/16 00:13:51 set file to redis err:<nil>
+errorLog:2024/01/16 16:46:59 getFile() redis connection err: dial tcp 192.168.117.128:6379: i/o timeout
+errorLog:2024/01/16 16:47:04 loadAccessToRedis() err:dial tcp 192.168.117.128:6379: i/o timeout
+errorLog:2024/01/16 16:47:04 getFile() err:dial tcp 192.168.117.128:6379: i/o timeout
+errorLog:2024/01/16 16:47:04 getFile err:dial tcp 192.168.117.128:6379: i/o timeout
+errorLog:2024/01/16 16:49:53 getFileFromRedis() err:WRONGTYPE Operation against a key holding the wrong kind of value
+errorLog:2024/01/16 16:49:53 getFile() err: WRONGTYPE Operation against a key holding the wrong kind of value
+errorLog:2024/01/16 16:49:53 getFile err:WRONGTYPE Operation against a key holding the wrong kind of value
+errorLog:2024/01/16 16:49:55 getFileFromRedis() err:WRONGTYPE Operation against a key holding the wrong kind of value
+errorLog:2024/01/16 16:49:55 getFile() err: WRONGTYPE Operation against a key holding the wrong kind of value
+errorLog:2024/01/16 16:49:55 getFile err:WRONGTYPE Operation against a key holding the wrong kind of value
+errorLog:2024/01/16 17:14:44 getFileStream() open file err:open C:/Users/HHXX12138/Desktop/2/204.txt: The system cannot find the file specified.
+errorLog:2024/01/16 17:14:44 getFile() err:open C:/Users/HHXX12138/Desktop/2/204.txt: The system cannot find the file specified.
+errorLog:2024/01/16 17:14:44 getFile err:open C:/Users/HHXX12138/Desktop/2/204.txt: The system cannot find the file specified.
