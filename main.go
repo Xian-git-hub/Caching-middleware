@@ -11,7 +11,6 @@ import (
 	"os"
 	"strconv"
 	"time"
-	"syscall"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -43,10 +42,12 @@ func init() {
 }
 
 func main() {
-	syscall.Umask(0)
+	// syscall.Umask(0)
 
 	// 创建mylog结构体变量
 	myLog = NewMyLogger()
+	// 第一次运行，设置第一个timer
+	myLog.setTimer()
 
 	mux := http.NewServeMux()
 
@@ -55,6 +56,9 @@ func main() {
 	mux.Handle("/", &helloHandlerStruct{"hello world handled by struct!"})
 
 	myLog.dailyLogger.Println("server start! welcome")
+
+	// 启动一个协程，让其监听timer对channel的操作
+	go myLog.Listener()
 
 	http.ListenAndServe(setting.ServerIp+setting.ServerPort, mux)
 
@@ -91,7 +95,7 @@ func handleRequestFile(w http.ResponseWriter, r *http.Request) {
 	data, err := getFile(fileName, filePath)
 	if err != nil {
 		myLog.errorLogger.Printf("getFile err:%v\n", err)
-		fmt.Println("err1:",err )
+		fmt.Println("err1:", err)
 		if errors.Is(err, os.ErrNotExist) {
 			fmt.Fprint(w, "您请求的数据服务器中不存在，请联系管理员")
 		}
@@ -106,7 +110,7 @@ func handleRequestFile(w http.ResponseWriter, r *http.Request) {
 		// 	}
 		// }
 		if data != nil {
-			w.Header().Set("Content-Type","video/mp2t")
+			w.Header().Set("Content-Type", "video/mp2t")
 			// w.Header().Set("content-disposition", "attachment;filename="+fileName)
 			w.Write(data)
 		}
@@ -114,7 +118,7 @@ func handleRequestFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 指定返回头中的disposition-content,让浏览器以附件的形式下载文件
-	w.Header().Set("Content-Type","video/mp2t")
+	w.Header().Set("Content-Type", "video/mp2t")
 	// w.Header().Set("content-disposition", "attachment;filename="+fileName)
 	w.Write(data)
 }
