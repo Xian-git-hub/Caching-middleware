@@ -29,7 +29,9 @@ type RDBConfig struct {
 	PoolSize     int    `json:"poolSize"`     //连接池最大连接数
 	MinIdleConns int    `json:"minIdleConns"` //最小空闲连接数
 	MaxIdleConns int    `json:"maxIdleConns"` //最大空闲连接数
-	PoolTimeout  int    `json:"poolTimeOut"`  // 等待连接最大时间
+	PoolTimeout  int    `json:"poolTimeOut"`  //等待连接最大时间
+	LoadCount    int	`json:"loadCount"`    //需要缓存的访问次数 
+    ExtendCount  int   	`json:"extendCount"`  //需要延长存活时间的次数
 }
 
 type Settings struct {

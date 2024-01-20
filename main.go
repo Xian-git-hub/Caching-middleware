@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"syscall"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -42,6 +43,7 @@ func init() {
 }
 
 func main() {
+	syscall.Umask(0)
 
 	// 创建mylog结构体变量
 	myLog = NewMyLogger()
@@ -89,23 +91,31 @@ func handleRequestFile(w http.ResponseWriter, r *http.Request) {
 	data, err := getFile(fileName, filePath)
 	if err != nil {
 		myLog.errorLogger.Printf("getFile err:%v\n", err)
+		fmt.Println("err1:",err )
 		if errors.Is(err, os.ErrNotExist) {
 			fmt.Fprint(w, "您请求的数据服务器中不存在，请联系管理员")
 		}
-		opErr, ok := err.(*net.OpError)
-		if ok {
-			if opErr.Timeout() {
-				// 指定返回头中的disposition-content,让浏览器以附件的形式下载文件
-				myLog.dailyLogger.Println("get from disk")
-				w.Header().Set("content-disposition", "attachment;filename="+fileName)
-				w.Write(data)
-			}
+		// opErr, ok := err.(*net.OpError)
+		// fmt.Printf("err type = %v\n",err)
+		// if ok {
+		// 	if opErr.Timeout() {
+		// 		// 指定返回头中的disposition-content,让浏览器以附件的形式下载文件
+		// 		myLog.dailyLogger.Println("get from disk")
+		// 		w.Header().Set("content-disposition", "attachment;filename="+fileName)
+		// 		w.Write(data)
+		// 	}
+		// }
+		if data != nil {
+			w.Header().Set("Content-Type","video/mp2t")
+			// w.Header().Set("content-disposition", "attachment;filename="+fileName)
+			w.Write(data)
 		}
 		return
 	}
 
 	// 指定返回头中的disposition-content,让浏览器以附件的形式下载文件
-	w.Header().Set("content-disposition", "attachment;filename="+fileName)
+	w.Header().Set("Content-Type","video/mp2t")
+	// w.Header().Set("content-disposition", "attachment;filename="+fileName)
 	w.Write(data)
 }
 
@@ -137,8 +147,9 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 			data, err = getFileFromRedis(fileName)
 			if err != nil {
 				myLog.errorLogger.Println("getFile() err:", err)
-				return nil, err
+				return data, err
 			}
+
 			err = setTTL(fileName, 2*time.Minute)
 			if err != nil {
 				myLog.errorLogger.Println("getFile() err:", err)
@@ -152,8 +163,9 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 		// 判断文件是否需要缓存
 		if isLoadToRedis(fileName) { //>5
 			// 文件访问数达到6，说明还没缓存但是需要缓存
-			if getFileAccess(fileName) == 5+1 {
+			if getFileAccess(fileName) == int64(setting.LoadCount+1) {
 				data, err = getFileStream(filePath)
+				// 从硬盘获取文件错误，没有数据返回
 				if err != nil {
 					myLog.errorLogger.Println("getFile() err:", err)
 					return nil, err
@@ -311,7 +323,7 @@ func loadAccessToRedis(key string, accessNum int) (err error) {
 func isLoadToRedis(key string) bool {
 	accessNum := getFileAccess(key)
 	// 如果大于阈值，则加载到redis中
-	if accessNum > 5 {
+	if accessNum > int64(setting.LoadCount) {
 		return true
 	} else if accessNum == -1 {
 		myLog.errorLogger.Println("isHotKey() err:key don't exist in redis")
@@ -325,7 +337,7 @@ func isLoadToRedis(key string) bool {
 // 缓存策略，判断这个key是否要延长其ttl
 func isHotkey(key string) bool {
 	accessNum := getFileAccess(key)
-	return accessNum > 20
+	return accessNum > int64(setting.ExtendCount)
 }
 
 // 设置key的ttl

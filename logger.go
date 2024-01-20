@@ -42,8 +42,8 @@ func NewMyLogger() (ml *MyLogger) {
 	dailyLog, errorLog := createLogFile()
 
 	return &MyLogger{
-		dailyLogger: log.New(dailyLog, "dailyLog:", log.Ldate|log.Ltime),
-		errorLogger: log.New(errorLog, "errorLog:", log.Ldate|log.Ltime),
+		dailyLogger: log.New(dailyLog, "dailyLog:", log.Ldate|log.Ltime|log.Lshortfile | log.LstdFlags),
+		errorLogger: log.New(errorLog, "errorLog:", log.Ldate|log.Ltime|log.Lshortfile | log.LstdFlags),
 	}
 }
 
@@ -70,17 +70,17 @@ func createLogFile() (dailyFile *os.File, errorFile *os.File) {
 	dailyFileName := firstDir + dailySecondDir + dirName + "/" + fileName + suffix
 
 	// 以新建|追加的方式打开文件夹
-	dailyFile, err = os.OpenFile(dailyFileName, os.O_CREATE|os.O_APPEND, 0666)
+	dailyFile, err = os.OpenFile(dailyFileName, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
 	if err != nil {
 		fmt.Println("err:", err)
 	}
 	// 同理
 	errorFileName := firstDir + errorSecondDir + dirName + "/" + fileName + suffix
-	errorFile, err = os.OpenFile(errorFileName, os.O_CREATE|os.O_APPEND, 0666)
+	errorFile, err = os.OpenFile(errorFileName, os.O_CREATE|os.O_RDWR|os.O_APPEND,0666)
 	if err != nil {
 		fmt.Println("err:", err)
 	}
-	return
+	return 
 
 }
 
