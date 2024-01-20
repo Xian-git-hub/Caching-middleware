@@ -18,9 +18,10 @@ VOLUME [ "/app" ]
 WORKDIR /app
 COPY --from=builder /usr/src/app/setting setting
 COPY --from=builder /usr/src/app/cache_middleware cache_middleware
-RUN chmod +x cache_middleware
-
+COPY --from=builder /usr/src/app/entrypoint.sh entrypoint.sh
 RUN mkdir log
 RUN mkdir video
 EXPOSE 8080
-ENTRYPOINT [ "./cache_middleware" ]
+
+RUN chmod +x entrypoint.sh
+ENTRYPOINT [ "./entrypoint.sh" ]

@@ -1,4 +1,0 @@
-errorLog:2024/01/19 16:44:20 getFile() err: dial tcp 192.168.117.128:6379: i/o timeout
-errorLog:2024/01/19 16:44:25 loadAccessToRedis() err:dial tcp 192.168.117.128:6379: i/o timeout
-errorLog:2024/01/19 16:44:25 getFile() err:dial tcp 192.168.117.128:6379: i/o timeout
-errorLog:2024/01/19 16:44:25 getFile err:dial tcp 192.168.117.128:6379: i/o timeout
