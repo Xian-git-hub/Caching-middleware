@@ -21,11 +21,12 @@ import (
 )
 
 const (
-	firstDir       = "./log"
 	dailySecondDir = "/dailyLog/"
 	errorSecondDir = "/errorLog/"
 	suffix         = ".txt"
 )
+
+var firstDir string
 
 // 一个自定义的logger结构体，包含了日常日志和错误日志
 type MyLogger struct {
@@ -35,6 +36,8 @@ type MyLogger struct {
 
 // 工厂函数，返回一个MyLogger结构体，用于记录日志
 func NewMyLogger() (ml *MyLogger) {
+
+	firstDir = setting.LoggerPath
 
 	dailyLog, errorLog := createLogFile()
 
