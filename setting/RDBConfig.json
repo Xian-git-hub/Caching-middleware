@@ -1,5 +1,5 @@
 {
-    "rdpIp": "192.168.117.128",
+    "rdpIp": "localhost",
     "rdpPort": ":6379",
     "password": "",
     "db": 0,

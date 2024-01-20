@@ -1,0 +1,19 @@
+version: '3'
+services:
+  caching-middleware:
+    image: caching-middleware:latest
+    container_name: caching-middleware
+    restart: always
+    ports: 
+      - '8080:8080'
+    volumes:
+      - app:/app
+
+volumes:
+  app:
+    name: app
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ./app

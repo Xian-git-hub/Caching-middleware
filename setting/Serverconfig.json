@@ -1,7 +1,7 @@
 {
     "suffix": ".txt",
-    "prefix": "C:/Users/HHXX12138/Desktop/2/",
-    "serverIp": "127.0.0.1",
+    "prefix": "./video",
+    "serverIp": "0.0.0.0",
     "serverPort":":8080",
-    "loggerPath":"./logger.log"
+    "loggerPath":"./log"
 }
