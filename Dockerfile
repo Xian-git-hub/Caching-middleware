@@ -11,16 +11,14 @@ RUN go build -o cache_middleware .
 
 FROM redis:6.2
 COPY redis.conf /usr/local/etc/redis/redis.conf 
-RUN redis-server /usr/local/etc/redis/redis.conf &
 
-RUN mkdir /app
+WORKDIR /app
 VOLUME [ "/app" ]
 WORKDIR /app
 COPY --from=builder /usr/src/app/setting setting
-COPY --from=builder /usr/src/app/cache_middleware cache_middleware
+COPY --from=builder /usr/src/app/cache_middleware /bin/cache_middleware
 COPY --from=builder /usr/src/app/entrypoint.sh entrypoint.sh
-RUN mkdir log
-RUN mkdir video
+
 EXPOSE 8080
 
 RUN chmod +x entrypoint.sh

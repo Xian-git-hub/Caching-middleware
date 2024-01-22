@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"path"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -109,6 +110,9 @@ func handleRequestFile(w http.ResponseWriter, r *http.Request) {
 		// 	}
 		// }
 		if data != nil {
+
+			fileExt := path.Ext(fileName)
+			
 			w.Header().Set("Content-Type", "video/mp2t")
 			// w.Header().Set("content-disposition", "attachment;filename="+fileName)
 			w.Write(data)
@@ -121,6 +125,9 @@ func handleRequestFile(w http.ResponseWriter, r *http.Request) {
 	// w.Header().Set("content-disposition", "attachment;filename="+fileName)
 	w.Write(data)
 }
+
+
+
 
 /*
 获取文件，并将文件发送给浏览器
