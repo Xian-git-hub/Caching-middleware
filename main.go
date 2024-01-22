@@ -47,7 +47,9 @@ func main() {
 	// 创建mylog结构体变量
 	myLog = NewMyLogger()
 	// 第一次运行，设置第一个timer
-	myLog.setTimer()
+	// myLog.setTimer()
+	// 启动一个协程，让其监听timer对channel的操作
+	go myLog.Listener()
 
 	mux := http.NewServeMux()
 
@@ -56,9 +58,6 @@ func main() {
 	mux.Handle("/", &helloHandlerStruct{"hello world handled by struct!"})
 
 	myLog.dailyLogger.Println("server start! welcome")
-
-	// 启动一个协程，让其监听timer对channel的操作
-	go myLog.Listener()
 
 	http.ListenAndServe(setting.ServerIp+setting.ServerPort, mux)
 
