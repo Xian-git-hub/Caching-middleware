@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
-	"path"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -57,6 +57,7 @@ func main() {
 	mux.HandleFunc("/greet", greetingHandler)
 	mux.HandleFunc("/download", handleRequestFile)
 	mux.Handle("/", &helloHandlerStruct{"hello world handled by struct!"})
+	mux.HandleFunc("/test", handledTest)
 
 	myLog.dailyLogger.Println("server start! welcome")
 
@@ -67,7 +68,17 @@ func main() {
 }
 
 func (handler *helloHandlerStruct) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
 	fmt.Fprintf(w, handler.content)
+}
+
+func handledTest(w http.ResponseWriter, r *http.Request) {
+
+	query := r.URL.Query()
+	fileName := query.Get("file")
+	fileSuffix := getFileSuffix(fileName)
+
+	fmt.Fprint(w, setting.MineType[fileSuffix])
 }
 
 func greetingHandler(w http.ResponseWriter, r *http.Request) {
@@ -111,9 +122,8 @@ func handleRequestFile(w http.ResponseWriter, r *http.Request) {
 		// }
 		if data != nil {
 
-			fileExt := path.Ext(fileName)
-			
-			w.Header().Set("Content-Type", "video/mp2t")
+			fileSuffix := getFileSuffix(fileName)
+			w.Header().Set("Content-Type", setting.MineType[fileSuffix].(string))
 			// w.Header().Set("content-disposition", "attachment;filename="+fileName)
 			w.Write(data)
 		}
@@ -121,13 +131,12 @@ func handleRequestFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 指定返回头中的disposition-content,让浏览器以附件的形式下载文件
-	w.Header().Set("Content-Type", "video/mp2t")
+
+	fileSuffix := getFileSuffix(fileName)
+	w.Header().Set("Content-Type", setting.MineType[fileSuffix].(string))
 	// w.Header().Set("content-disposition", "attachment;filename="+fileName)
 	w.Write(data)
 }
-
-
-
 
 /*
 获取文件，并将文件发送给浏览器
@@ -374,3 +383,9 @@ func increseAccess(key string) (err error) {
 // func preload() {
 
 // }
+
+// 获取文件的后缀返回
+func getFileSuffix(file string) (suffix string) {
+	fileSlice := strings.Split(file, ".")
+	return fileSlice[len(fileSlice)-1]
+}

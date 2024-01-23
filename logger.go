@@ -55,6 +55,52 @@ func NewMyLogger() (ml *MyLogger) {
 	return myLog
 }
 
+// 监听函数，监听是否有timer往通道里面发送数据
+// 执行对应的操作
+func (myLog *MyLogger) Listener() {
+
+	// 监听定时器的channel,当时间到了就创建一个新的定时器
+	// 改进?:第一次setTimer可以使用一个一次性的timer,之后
+	// 程序运行是会稳定在24h之后创建日志文件，可以使用ticker
+	for range myLog.timer.C {
+		fmt.Println("time is up:", time.Now().Format("2006-01-02 15:04:05"))
+		myLog.createLogFileAuto()
+		nextTime := getNextCreateTime()
+		myLog.timer.Reset(nextTime)
+	}
+
+}
+
+// 设置一个timer,用于定时创建日志文件
+// 这个timer会自动获取距离下次创建日志的时间
+func (myLog *MyLogger) setTimer() {
+
+	// 获取下次创建日志文件的时间段，用这个时间段创建一个定时器
+	nextTime := getNextCreateTime()
+	myLog.timer = time.NewTimer(nextTime)
+
+}
+
+// 关闭旧的日志文件，并创建新的日志文件
+func (myLog *MyLogger) createLogFileAuto() {
+
+	// fmt.Println("hahaha")
+	// 关闭旧的日志文件
+	myLog.dailyFile.Close()
+	myLog.errorFile.Close()
+
+	// 创建新的日志文件
+	newDailyFile, newErrorFile := createLogFile()
+
+	// 将新的日志文件设置好
+	myLog.dailyFile = newDailyFile
+	myLog.errorFile = newErrorFile
+	myLog.dailyLogger = log.New(newDailyFile, "dailyLog:", log.Ldate|log.Ltime|log.Lshortfile|log.LstdFlags)
+	myLog.errorLogger = log.New(newErrorFile, "errorLog:", log.Ldate|log.Ltime|log.Lshortfile|log.LstdFlags)
+
+	// fmt.Println("lalala")
+}
+
 // 创建对应的日志文件
 func createLogFile() (dailyFile *os.File, errorFile *os.File) {
 
@@ -73,8 +119,8 @@ func createLogFile() (dailyFile *os.File, errorFile *os.File) {
 	}
 
 	// 日志文件的名字
-	// fileName := getDateStringDay()
-	fileName := getDateString()
+	fileName := getDateStringDay()
+	// fileName := getDateString()
 	// 拼接文件路径
 	dailyFileName := firstDir + dailySecondDir + dirName + "/" + fileName + suffix
 
@@ -93,68 +139,21 @@ func createLogFile() (dailyFile *os.File, errorFile *os.File) {
 
 }
 
-// 监听函数，监听是否有timer往通道里面发送数据
-func (myLog *MyLogger) Listener() {
-	// timer发送了数据，说明创建下一个日志文件的时间到了
-	<-myLog.timer.C
-	fmt.Println("timer")
-
-	// 先关闭之前的文件并创建今天的文件
-	// 避免误差，先沉睡2s
-	time.Sleep(2 * time.Second)
-	myLog.createLogFileAuto()
-
-	// 设置下一个timer
-	myLog.setTimer()
-
-}
-
-// 关闭旧的日志文件，并创建新的日志文件
-func (myLog *MyLogger) createLogFileAuto() {
-
-	fmt.Println("hahaha")
-	// 关闭旧的日志文件
-	myLog.dailyFile.Close()
-	myLog.errorFile.Close()
-
-	// 创建新的日志文件
-	newDailyFile, newErrorFile := createLogFile()
-
-	// 将新的日志文件设置好
-	myLog.dailyFile = newDailyFile
-	myLog.errorFile = newErrorFile
-	myLog.dailyLogger = log.New(newDailyFile, "dailyLog:", log.Ldate|log.Ltime|log.Lshortfile|log.LstdFlags)
-	myLog.errorLogger = log.New(newErrorFile, "errorLog:", log.Ldate|log.Ltime|log.Lshortfile|log.LstdFlags)
-
-	fmt.Println("lalala")
-}
-
-// 设置一个timer,用于定时创建日志文件
-// 这个timer会自动获取距离下次创建日志的时间
-func (myLog *MyLogger) setTimer() {
-	// 获得距离下次创建日志文件的秒数
-	duration := getNextCreateTime()
-	// 用这个秒数设置一个timer
-	myLog.timer = time.NewTimer(time.Duration(duration))
-
-}
-
 // 返回距离下次创建日志文件的时间
-func getNextCreateTime() int64 {
+func getNextCreateTime() time.Duration {
 
 	// 获取当前时间
 	now := time.Now()
 
 	// 获取第二天的零点时间的Unix时间戳
 	// 这里不需要担心天数越界问题，golang会帮我们处理
-	tomrrowZero := time.Date(now.Year(), now.Month(), now.Day(), 16, 32, 0, 0, time.Local)
+	tomrrowZero := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.Local)
 	nextTime := tomrrowZero.Sub(now)
 
 	fmt.Println("nextTime:", tomrrowZero.Format("2006-01-02 15:04:05"))
 	fmt.Println("subTime:", int64(nextTime.Seconds()))
 
-	return int64(nextTime.Seconds())
-
+	return nextTime
 }
 
 // 返回当前年-月的字符串
@@ -170,7 +169,7 @@ func getDateStringDay() string {
 }
 
 // 返回当前年-月-日-时-分-秒的字符串
-func getDateString() string {
-	now := time.Now()
-	return now.Format("2006-01-02 15-04-05")
-}
+// func getDateString() string {
+// 	now := time.Now()
+// 	return now.Format("2006-01-02 15-04-05")
+// }
