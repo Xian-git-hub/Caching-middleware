@@ -150,8 +150,8 @@ func getNextCreateTime() time.Duration {
 	tomrrowZero := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.Local)
 	nextTime := tomrrowZero.Sub(now)
 
-	fmt.Println("nextTime:", tomrrowZero.Format("2006-01-02 15:04:05"))
-	fmt.Println("subTime:", int64(nextTime.Seconds()))
+	// fmt.Println("nextTime:", tomrrowZero.Format("2006-01-02 15:04:05"))
+	// fmt.Println("subTime:", int64(nextTime.Seconds()))
 
 	return nextTime
 }

@@ -8,5 +8,7 @@
     "maxIdleConns": 12,
     "poolTimeOut": 5,
     "loadCount" : 5,
-    "extendCount" : 20
+    "extendCount" : 20,
+    "ttl" : 2,
+    "hotttl" : 3
 }

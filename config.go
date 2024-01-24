@@ -32,6 +32,9 @@ type RDBConfig struct {
 	PoolTimeout  int    `json:"poolTimeOut"`  //等待连接最大时间
 	LoadCount    int    `json:"loadCount"`    //需要缓存的访问次数
 	ExtendCount  int    `json:"extendCount"`  //需要延长存活时间的次数
+	TTL          int    `json:"ttl"`          //文件第一次缓存的存活时间，单位为分钟
+	HotTTL       int    `json:"hotttl"`       //热点数据的存活时间，单位为分钟
+
 }
 
 type Settings struct {

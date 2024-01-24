@@ -110,21 +110,10 @@ func handleRequestFile(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, os.ErrNotExist) {
 			fmt.Fprint(w, "您请求的数据服务器中不存在，请联系管理员")
 		}
-		// opErr, ok := err.(*net.OpError)
-		// fmt.Printf("err type = %v\n",err)
-		// if ok {
-		// 	if opErr.Timeout() {
-		// 		// 指定返回头中的disposition-content,让浏览器以附件的形式下载文件
-		// 		myLog.dailyLogger.Println("get from disk")
-		// 		w.Header().Set("content-disposition", "attachment;filename="+fileName)
-		// 		w.Write(data)
-		// 	}
-		// }
 		if data != nil {
-
+			myLog.dailyLogger.Println("get from disk:", filePath)
 			fileSuffix := getFileSuffix(fileName)
 			w.Header().Set("Content-Type", setting.MineType[fileSuffix].(string))
-			// w.Header().Set("content-disposition", "attachment;filename="+fileName)
 			w.Write(data)
 		}
 		return
@@ -169,13 +158,13 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 				return data, err
 			}
 
-			err = setTTL(fileName, 2*time.Minute)
+			err = setTTL(fileName, time.Duration(setting.HotTTL)*time.Minute)
 			if err != nil {
 				myLog.errorLogger.Println("getFile() err:", err)
 				return data, err
 			}
 			myLog.dailyLogger.Printf("file %v has extended its ttl\n", fileName)
-			myLog.dailyLogger.Println("get from redis")
+			myLog.dailyLogger.Println("get from redis:", filePath)
 			return
 		}
 
@@ -193,7 +182,7 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 				err = loadFileToRedis(fileName, data)
 				if err != nil {
 					myLog.errorLogger.Printf("loadFileToRedis err:%v\n", err)
-					myLog.dailyLogger.Println("get from disk")
+					myLog.dailyLogger.Println("get from disk:" /*, filePath*/)
 					return data, err
 				} else if opErr, ok := err.(*net.OpError); ok {
 					if opErr.Timeout() {
@@ -201,7 +190,7 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 					} else {
 						myLog.errorLogger.Printf("getFile() err operation:%v\n", opErr.Op)
 					}
-					myLog.dailyLogger.Println("get from disk")
+					myLog.dailyLogger.Println("get from disk:" /*filePath*/)
 					return data, err
 				}
 				return
@@ -211,7 +200,7 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 					myLog.errorLogger.Println("getFile() err:", err)
 					return
 				}
-				myLog.dailyLogger.Println("get from redis")
+				myLog.dailyLogger.Println("get from redis:", filePath)
 				return
 			}
 		}
@@ -222,7 +211,7 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 			myLog.errorLogger.Println("getFile() err:", err)
 			return nil, err
 		}
-		myLog.dailyLogger.Println("get from disk")
+		myLog.dailyLogger.Println("get from disk:" /*filePath*/)
 		return
 	}
 
@@ -243,7 +232,7 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 		myLog.errorLogger.Printf("getFile() err:%v\n", err)
 		return data, err
 	}
-	myLog.dailyLogger.Println("get from disk")
+	myLog.dailyLogger.Println("get from disk:" /*filePath*/)
 	return
 }
 
@@ -314,7 +303,7 @@ func loadFileToRedis(key string, fileStream []byte) (err error) {
 		return
 	}
 	// 设置其ttl
-	err = setTTL(key, 1*time.Minute)
+	err = setTTL(key, time.Duration(setting.TTL)*time.Minute)
 	if err != nil {
 		myLog.errorLogger.Printf("loadFileToRedis() err:%v\n", err)
 		return
@@ -330,7 +319,7 @@ func loadAccessToRedis(key string, accessNum int) (err error) {
 		return
 	}
 	// 设置其ttl
-	err = setTTL(key, 1*time.Minute)
+	err = setTTL(key, time.Duration(setting.TTL)*time.Minute)
 	if err != nil {
 		myLog.errorLogger.Printf("loadAccessToRedis() err:%v\n", err)
 		return
