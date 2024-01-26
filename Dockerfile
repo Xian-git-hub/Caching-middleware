@@ -10,6 +10,9 @@ RUN go build -o cache_middleware .
 
 
 FROM redis:6.2
+RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+RUN echo 'Asia/Shanghai' >/etc/timezone
+
 COPY redis.conf /usr/local/etc/redis/redis.conf 
 
 WORKDIR /app
