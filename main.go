@@ -57,14 +57,14 @@ func main() {
 	mux.HandleFunc("/greet", greetingHandler)
 	mux.HandleFunc("/download", handleRequestFile)
 	mux.Handle("/", &helloHandlerStruct{"hello world handled by struct!"})
-	mux.HandleFunc("/test", handledTest)
+	mux.HandleFunc("/flush", handledFlush)
 
-	myLog.dailyLogger.Println("server start! welcome")
+	// myLog.dailyLogger.Println("server start! welcome")
 
 	http.ListenAndServe(setting.ServerIp+setting.ServerPort, mux)
 
 	fmt.Println("server close! Bye Bye")
-	myLog.dailyLogger.Println("server close! Bye Bye")
+	// myLog.dailyLogger.Println("server close! Bye Bye")
 }
 
 func (handler *helloHandlerStruct) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -72,7 +72,7 @@ func (handler *helloHandlerStruct) ServeHTTP(w http.ResponseWriter, r *http.Requ
 	fmt.Fprintf(w, handler.content)
 }
 
-func handledTest(w http.ResponseWriter, r *http.Request) {
+func handledFlush(w http.ResponseWriter, r *http.Request) {
 
 	query := r.URL.Query()
 	fileName := query.Get("file")
@@ -111,7 +111,7 @@ func handleRequestFile(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "您请求的数据服务器中不存在，请联系管理员")
 		}
 		if data != nil {
-			myLog.dailyLogger.Println("get from disk:", filePath)
+			// myLog.dailyLogger.Println("get from disk:", filePath)
 			fileSuffix := getFileSuffix(fileName)
 			w.Header().Set("Content-Type", setting.MineType[fileSuffix].(string))
 			w.Write(data)
@@ -163,8 +163,8 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 				myLog.errorLogger.Println("getFile() err:", err)
 				return data, err
 			}
-			myLog.dailyLogger.Printf("file %v has extended its ttl\n", fileName)
-			myLog.dailyLogger.Println("get from redis:", filePath)
+			// myLog.dailyLogger.Printf("file %v has extended its ttl\n", fileName)
+			// myLog.dailyLogger.Pritln("get from redis:", filePath)
 			return
 		}
 
@@ -182,7 +182,7 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 				err = loadFileToRedis(fileName, data)
 				if err != nil {
 					myLog.errorLogger.Printf("loadFileToRedis err:%v\n", err)
-					myLog.dailyLogger.Println("get from disk:" /*, filePath*/)
+					// myLog.dailyLogger.Pintln("get from disk:" /*, filePath*/)
 					return data, err
 				} else if opErr, ok := err.(*net.OpError); ok {
 					if opErr.Timeout() {
@@ -190,7 +190,7 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 					} else {
 						myLog.errorLogger.Printf("getFile() err operation:%v\n", opErr.Op)
 					}
-					myLog.dailyLogger.Println("get from disk:" /*filePath*/)
+					// myLog.dailyLogger.Println("get from disk:" /*filePath*/)
 					return data, err
 				}
 				return
@@ -200,7 +200,7 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 					myLog.errorLogger.Println("getFile() err:", err)
 					return
 				}
-				myLog.dailyLogger.Println("get from redis:", filePath)
+				// myLog.dailyLogger.Println("get from redis:", filePath)
 				return
 			}
 		}
@@ -211,7 +211,7 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 			myLog.errorLogger.Println("getFile() err:", err)
 			return nil, err
 		}
-		myLog.dailyLogger.Println("get from disk:" /*filePath*/)
+		// myLog.dailyLogger.Println("get from disk:" /*filePath*/)
 		return
 	}
 
@@ -232,7 +232,7 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 		myLog.errorLogger.Printf("getFile() err:%v\n", err)
 		return data, err
 	}
-	myLog.dailyLogger.Println("get from disk:" /*filePath*/)
+	// myLog.dailyLogger.Println("get from disk:" /*filePath*/)
 	return
 }
 
@@ -368,13 +368,19 @@ func increseAccess(key string) (err error) {
 	return nil
 }
 
-// 预加载，手动选择一些热数据加载至redis中4
-// func preload() {
-
-// }
-
 // 获取文件的后缀返回
 func getFileSuffix(file string) (suffix string) {
 	fileSlice := strings.Split(file, ".")
 	return fileSlice[len(fileSlice)-1]
 }
+
+// 清除所有的缓存
+func flushCache() (err error) {
+	err = rdb.FlushDB(context.Background()).Err()
+	return err
+}
+
+// 预加载，手动选择一些热数据加载至redis中4
+// func preload() {
+
+// }
