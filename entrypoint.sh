@@ -3,7 +3,8 @@
 redis-server /usr/local/etc/redis/redis.conf &
 
 
-cp -r /usr/local/etc/caching-middleware/setting /app
+if [ ! -d "/app/setting" ]; then
+  cp -r /usr/local/etc/caching-middleware/setting /app
+fi
 
-cd /app
 cache_middleware
