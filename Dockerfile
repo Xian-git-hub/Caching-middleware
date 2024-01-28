@@ -15,8 +15,7 @@ RUN echo 'Asia/Shanghai' >/etc/timezone
 
 COPY redis.conf /usr/local/etc/redis/redis.conf 
 
-WORKDIR /app
-VOLUME [ "/app" ]
+VOLUME /app
 WORKDIR /app
 COPY --from=builder /usr/src/app/setting setting
 COPY --from=builder /usr/src/app/cache_middleware /bin/cache_middleware
