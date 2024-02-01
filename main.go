@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
 	"time"
@@ -16,13 +17,18 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-var rdb *redis.Client // 全局的go-redis里的redis客户端，通过这个访问redis
-var myLog *MyLogger   // 全局的日志对象，用来记录日志
-var setting Settings  // 全局的参数对象，使用参数
-
-type helloHandlerStruct struct {
-	content string
+type counter struct {
+	cticker *time.Ticker
+	mu      chan bool
+	count   int
+	total   int
 }
+
+var rdb *redis.Client       // 全局的go-redis里的redis客户端，通过这个访问redis
+var myLog *MyLogger         // 全局的日志对象，用来记录日志
+var setting Settings        // 全局的参数对象，使用参数
+var exitChan chan os.Signal // 退出信号接受的channel
+var c counter
 
 func init() {
 
@@ -43,12 +49,12 @@ func init() {
 }
 
 func main() {
-	// syscall.Umask(0)
+	exitChan = make(chan os.Signal, 1)
+	signal.Notify(exitChan, os.Interrupt)
 
 	// 创建mylog结构体变量
 	myLog = NewMyLogger()
-	// 第一次运行，设置第一个timer
-	// myLog.setTimer()
+
 	// 启动一个协程，让其监听timer对channel的操作
 	go myLog.Listener()
 
@@ -56,20 +62,15 @@ func main() {
 
 	mux.HandleFunc("/greet", greetingHandler)
 	mux.HandleFunc("/download", handleRequestFile)
-	mux.Handle("/", &helloHandlerStruct{"hello world handled by struct!"})
 	mux.HandleFunc("/flush", handledFlush)
 
 	// myLog.dailyLogger.Println("server start! welcome")
+	myLog.doLog(dailyType, "server start! welcome")
 
 	http.ListenAndServe(setting.ServerIp+setting.ServerPort, mux)
 
 	fmt.Println("server close! Bye Bye")
 	// myLog.dailyLogger.Println("server close! Bye Bye")
-}
-
-func (handler *helloHandlerStruct) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
-	fmt.Fprintf(w, handler.content)
 }
 
 func handledFlush(w http.ResponseWriter, r *http.Request) {
@@ -105,13 +106,15 @@ func handleRequestFile(w http.ResponseWriter, r *http.Request) {
 	// 获取文件,以[]byte形式
 	data, err := getFile(fileName, filePath)
 	if err != nil {
-		myLog.errorLogger.Printf("getFile err:%v\n", err)
+		// myLog.errorLogger.Printf("%v\n", err)
+		go myLog.doLog(errorType, "getFile err:"+err.Error())
 		fmt.Println("err1:", err)
 		if errors.Is(err, os.ErrNotExist) {
 			fmt.Fprint(w, "您请求的数据服务器中不存在，请联系管理员")
 		}
 		if data != nil {
 			// myLog.dailyLogger.Println("get from disk:", filePath)
+			myLog.doLog(dailyType, "get from disk"+filePath)
 			fileSuffix := getFileSuffix(fileName)
 			w.Header().Set("Content-Type", setting.MineType[fileSuffix].(string))
 			w.Write(data)
@@ -138,7 +141,8 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 	// 判断key是否存在于redis中
 	exist, err := rdb.Exists(context.Background(), fileName).Result()
 	if err != nil {
-		myLog.errorLogger.Println("getFile() err:", err)
+		// myLog.errorLogger.Println("getFile() err:", err)
+		go myLog.doLog(errorType, "getFile() err:"+err.Error())
 	}
 
 	// 文件key存在
@@ -146,7 +150,8 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 		// 先给文件的access++
 		err = increseAccess(fileName)
 		if err != nil {
-			myLog.errorLogger.Panicln("getFile() err:", err)
+			// myLog.errorLogger.Panicln("getFile() err:", err)
+			go myLog.doLog(errorType, "getFile() err:"+err.Error())
 		}
 
 		// 判断文件是否是热点数据，是否需要延长其存活时间
@@ -154,17 +159,25 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 			// 是热点数据，延长其存活时间并返回数据
 			data, err = getFileFromRedis(fileName)
 			if err != nil {
-				myLog.errorLogger.Println("getFile() err:", err)
+				// myLog.errorLogger.Println("getFile() err:", err)
+				go myLog.doLog(errorType, "getFile() err:"+err.Error())
 				return data, err
 			}
 
 			err = setTTL(fileName, time.Duration(setting.HotTTL)*time.Minute)
 			if err != nil {
-				myLog.errorLogger.Println("getFile() err:", err)
+				// myLog.errorLogger.Println("getFile() err:", err)
+				go myLog.doLog(errorType, "getFile() err:"+err.Error())
 				return data, err
 			}
 			// myLog.dailyLogger.Printf("file %v has extended its ttl\n", fileName)
 			// myLog.dailyLogger.Pritln("get from redis:", filePath)
+			go func() {
+				myLog.doLog(dailyType, fileName+"has extender its ttl")
+				c.countIncr()
+				c.totalIncr()
+				myLog.doLog(dailyType, "get from redis"+filePath)
+			}()
 			return
 		}
 
@@ -175,32 +188,51 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 				data, err = getFileStream(filePath)
 				// 从硬盘获取文件错误，没有数据返回
 				if err != nil {
-					myLog.errorLogger.Println("getFile() err:", err)
+					// myLog.errorLogger.Println("getFile() err:", err)
+					myLog.doLog(errorType, "getFile() err:"+err.Error())
 					return nil, err
 				}
 				// 将获得的字节流加载到redis中
 				err = loadFileToRedis(fileName, data)
 				if err != nil {
-					myLog.errorLogger.Printf("loadFileToRedis err:%v\n", err)
+					// myLog.errorLogger.Printf("loadFileToRedis err:%v\n", err)
+					go myLog.doLog(errorType, "loadFileToRedis err:"+err.Error())
 					// myLog.dailyLogger.Pintln("get from disk:" /*, filePath*/)
+					go func() {
+						myLog.doLog(dailyType, "get from disk:"+fileName)
+						c.totalIncr()
+					}()
 					return data, err
 				} else if opErr, ok := err.(*net.OpError); ok {
 					if opErr.Timeout() {
-						myLog.errorLogger.Printf("getFile() tiomeout operation:%v\n", opErr.Op)
+						// myLog.errorLogger.Printf("getFile() tiomeout operation:%v\n", opErr.Op)
+						go myLog.doLog(errorType, "getFile() tiomeout operation:"+opErr.Op)
 					} else {
-						myLog.errorLogger.Printf("getFile() err operation:%v\n", opErr.Op)
+						// myLog.errorLogger.Printf("getFile() err operation:%v\n", opErr.Op)
+						go myLog.doLog(errorType, "getFile() err operation:"+opErr.Op)
 					}
 					// myLog.dailyLogger.Println("get from disk:" /*filePath*/)
+					go func() {
+						c.totalIncr()
+						myLog.doLog(dailyType, "get from disk"+filePath)
+					}()
 					return data, err
 				}
 				return
 			} else { // 这些是已经缓存了的但是还没被延长ttl的文件
 				data, err = getFileFromRedis(fileName)
 				if err != nil {
-					myLog.errorLogger.Println("getFile() err:", err)
+					// myLog.errorLogger.Println("getFile() err:", err)
+					go myLog.doLog(errorType, "getFile() err:"+err.Error())
 					return
 				}
 				// myLog.dailyLogger.Println("get from redis:", filePath)
+				go func() {
+					c.countIncr()
+					c.totalIncr()
+					myLog.doLog(dailyType, "get from redis"+filePath)
+				}()
+
 				return
 			}
 		}
@@ -208,10 +240,15 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 		// 不需要缓存，从硬盘加载后返回即可
 		data, err = getFileStream(filePath)
 		if err != nil {
-			myLog.errorLogger.Println("getFile() err:", err)
+			// myLog.errorLogger.Println("getFile() err:", err)
+			go myLog.doLog(errorType, "getFile() err:"+err.Error())
 			return nil, err
 		}
 		// myLog.dailyLogger.Println("get from disk:" /*filePath*/)
+		go func() {
+			c.totalIncr()
+			myLog.doLog(dailyType, "get from disk"+filePath)
+		}()
 		return
 	}
 
@@ -222,17 +259,24 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 	// 获得文件的字节流
 	data, err = getFileStream(filePath)
 	if err != nil {
-		myLog.errorLogger.Printf("getFile() err:%v\n", err)
-		return
+		// myLog.errorLogger.Printf("getFile() err:%v\n", err)
+		go myLog.doLog(errorType, "getFile() err:"+err.Error())
+		return nil, err
 	}
 
 	// 将数据返回并且创建这个key的access
 	err = loadAccessToRedis(fileName, 1)
 	if err != nil {
-		myLog.errorLogger.Printf("getFile() err:%v\n", err)
+		// myLog.errorLogger.Printf("getFile() err:%v\n", err)
+		go myLog.doLog(errorType, "getFile() err:"+err.Error())
 		return data, err
 	}
 	// myLog.dailyLogger.Println("get from disk:" /*filePath*/)
+	go func() {
+		c.totalIncr()
+		myLog.doLog(dailyType, "get from disk"+filePath)
+	}()
+
 	return
 }
 
@@ -243,7 +287,8 @@ func getFileStream(filePath string) (fileStream []byte, err error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		// fmt.Println("err:", err)
-		myLog.errorLogger.Printf("getFileStream() open file err:%v", err)
+		// myLog.errorLogger.Printf("getFileStream() open file err:%v", err)
+		go myLog.doLog(errorType, "getFileStream() open file err:"+err.Error())
 		return
 	}
 	// 延迟关闭，避免内存泄露
@@ -274,10 +319,12 @@ func getFileFromRedis(key string) (result []byte, err error) {
 		// 结果为空，redis中不存在数据
 		if err == redis.Nil {
 			// fmt.Println("文件不在内存中")
-			myLog.errorLogger.Printf("getFileFromRedis() err:%v\n", err)
+			// myLog.errorLogger.Printf("getFileFromRedis() err:%v\n", err)
+			go myLog.doLog(errorType, "getFileFromRedis() err:"+err.Error())
 			return
 		} else {
-			myLog.errorLogger.Printf("getFileFromRedis() err:%v\n", err)
+			// myLog.errorLogger.Printf("getFileFromRedis() err:%v\n", err)
+			go myLog.doLog(errorType, "getFileFromRedis() err:"+err.Error())
 			return
 		}
 	}
@@ -288,7 +335,8 @@ func getFileFromRedis(key string) (result []byte, err error) {
 func getFileAccess(key string) int64 {
 	access, err := rdb.HGet(context.Background(), key, "access").Result()
 	if err != nil {
-		myLog.errorLogger.Println("getFileAccess() err:", err)
+		// myLog.errorLogger.Println("getFileAccess() err:", err)
+		go myLog.doLog(errorType, "getFileAccess() err:"+err.Error())
 		return -1
 	}
 	accessNum, _ := strconv.ParseInt(access, 10, 64)
@@ -299,13 +347,15 @@ func getFileAccess(key string) int64 {
 func loadFileToRedis(key string, fileStream []byte) (err error) {
 	err = rdb.HSet(context.Background(), key, "data", fileStream).Err()
 	if err != nil {
-		myLog.errorLogger.Printf("loadFileToRedis() err:%v\n", err)
+		// myLog.errorLogger.Printf("loadFileToRedis() err:%v\n", err)
+		go myLog.doLog(errorType, "loadFileToRedis() err:"+err.Error())
 		return
 	}
 	// 设置其ttl
 	err = setTTL(key, time.Duration(setting.TTL)*time.Minute)
 	if err != nil {
-		myLog.errorLogger.Printf("loadFileToRedis() err:%v\n", err)
+		// myLog.errorLogger.Printf("loadFileToRedis() err:%v\n", err)
+		go myLog.doLog(errorType, "loadFileToRedis() err:"+err.Error())
 		return
 	}
 	return
@@ -315,13 +365,15 @@ func loadFileToRedis(key string, fileStream []byte) (err error) {
 func loadAccessToRedis(key string, accessNum int) (err error) {
 	err = rdb.HSet(context.Background(), key, "access", accessNum).Err()
 	if err != nil {
-		myLog.errorLogger.Printf("loadAccessToRedis() err:%v\n", err)
+		// myLog.errorLogger.Printf("loadAccessToRedis() err:%v\n", err)
+		go myLog.doLog(errorType, "loadAccessToRedis() err:"+err.Error())
 		return
 	}
 	// 设置其ttl
 	err = setTTL(key, time.Duration(setting.TTL)*time.Minute)
 	if err != nil {
-		myLog.errorLogger.Printf("loadAccessToRedis() err:%v\n", err)
+		// myLog.errorLogger.Printf("loadAccessToRedis() err:%v\n", err)
+		go myLog.doLog(errorType, "loadAccessToRedis() err:"+err.Error())
 		return
 	}
 	return
@@ -334,7 +386,8 @@ func isLoadToRedis(key string) bool {
 	if accessNum > int64(setting.LoadCount) {
 		return true
 	} else if accessNum == -1 {
-		myLog.errorLogger.Println("isHotKey() err:key don't exist in redis")
+		// myLog.errorLogger.Println("isHotKey() err:key don't exist in redis")
+		go myLog.doLog(errorType, "isHotKey() err:key don't exist in redis")
 		return false
 	} else {
 		return false
@@ -352,7 +405,8 @@ func isHotkey(key string) bool {
 func setTTL(key string, time time.Duration) error {
 	_, err := rdb.Expire(context.Background(), key, time).Result()
 	if err != nil {
-		myLog.errorLogger.Println("extendTTL() err:", err)
+		// myLog.errorLogger.Println("extendTTL() err:", err)
+		go myLog.doLog(errorType, "extendTTL() err:"+err.Error())
 		return err
 	}
 	return err
@@ -362,7 +416,8 @@ func setTTL(key string, time time.Duration) error {
 func increseAccess(key string) (err error) {
 	_, err = rdb.HIncrBy(context.Background(), key, "access", 1).Result()
 	if err != nil {
-		myLog.errorLogger.Println("increseAccess() err:", err)
+		// myLog.errorLogger.Println("increseAccess() err:", err)
+		go myLog.doLog(errorType, "increseAccess() err:"+err.Error())
 		return
 	}
 	return nil
@@ -375,12 +430,42 @@ func getFileSuffix(file string) (suffix string) {
 }
 
 // 清除所有的缓存
-func flushCache() (err error) {
-	err = rdb.FlushDB(context.Background()).Err()
-	return err
-}
+// func flushCache() (err error) {
+// 	err = rdb.FlushDB(context.Background()).Err()
+// 	return err
+// }
 
 // 预加载，手动选择一些热数据加载至redis中4
 // func preload() {
 
 // }
+// 自增一
+func (c *counter) countIncr() {
+	<-c.mu
+	c.count++
+	c.mu <- true
+}
+
+func (c *counter) totalIncr() {
+	<-c.mu
+	c.total++
+	c.mu <- true
+}
+
+// 返回百分比
+func (c *counter) cal() string {
+
+	<-c.mu
+	ratio := c.count / c.total
+	c.mu <- true
+
+	return strconv.Itoa(ratio * 100)
+}
+
+// 重置
+func (c *counter) reset() {
+	<-c.mu
+	c.count = 0
+	c.total = 0
+	c.mu <- true
+}
