@@ -2,5 +2,9 @@
 # Start Redis server
 redis-server /usr/local/etc/redis/redis.conf &
 
-# 启动您的应用程序
+
+if [ ! -d "/app/setting" ]; then
+  cp -r /usr/local/etc/caching-middleware/setting /app
+fi
+
 cache_middleware

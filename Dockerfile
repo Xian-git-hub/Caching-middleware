@@ -10,16 +10,17 @@ RUN go build -o cache_middleware .
 
 
 FROM redis:6.2
-COPY redis.conf /usr/local/etc/redis/redis.conf 
+WORKDIR /app
+RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+RUN echo 'Asia/Shanghai' >/etc/timezone
 
-WORKDIR /app
-VOLUME [ "/app" ]
-WORKDIR /app
-COPY --from=builder /usr/src/app/setting setting
+COPY redis.conf /usr/local/etc/redis/redis.conf 
 COPY --from=builder /usr/src/app/cache_middleware /bin/cache_middleware
-COPY --from=builder /usr/src/app/entrypoint.sh entrypoint.sh
+
+COPY --from=builder /usr/src/app/setting /usr/local/etc/caching-middleware/setting
+COPY --from=builder /usr/src/app/entrypoint.sh /usr/local/etc/caching-middleware/entrypoint.sh
 
 EXPOSE 8080
 
-RUN chmod +x entrypoint.sh
-ENTRYPOINT [ "./entrypoint.sh" ]
+RUN chmod +x /usr/local/etc/caching-middleware/entrypoint.sh
+ENTRYPOINT [ "/usr/local/etc/caching-middleware/entrypoint.sh" ]
