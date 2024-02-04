@@ -118,7 +118,7 @@ func handleRequestFile(w http.ResponseWriter, r *http.Request) {
 		}
 		if data != nil {
 			// myLog.dailyLogger.Println("get from disk:", filePath)
-			myLog.doLog(dailyType, "get from disk"+filePath)
+			//myLog.doLog(dailyType, "get from disk"+filePath)
 			fileSuffix := getFileSuffix(fileName)
 			w.Header().Set("Content-Type", setting.MineType[fileSuffix].(string))
 			w.Write(data)
@@ -203,7 +203,7 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 					go myLog.doLog(errorType, "loadFileToRedis err:"+err.Error())
 					// myLog.dailyLogger.Pintln("get from disk:" /*, filePath*/)
 					go func() {
-						myLog.doLog(dailyType, "get from disk:"+fileName)
+						//myLog.doLog(dailyType, "get from disk:"+fileName)
 						c.totalIncr()
 					}()
 					return data, err
@@ -218,7 +218,7 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 					// myLog.dailyLogger.Println("get from disk:" /*filePath*/)
 					go func() {
 						c.totalIncr()
-						myLog.doLog(dailyType, "get from disk"+filePath)
+						//myLog.doLog(dailyType, "get from disk"+filePath)
 					}()
 					return data, err
 				}
@@ -251,7 +251,7 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 		// myLog.dailyLogger.Println("get from disk:" /*filePath*/)
 		go func() {
 			c.totalIncr()
-			myLog.doLog(dailyType, "get from disk"+filePath)
+			//myLog.doLog(dailyType, "get from disk"+filePath)
 		}()
 		return
 	}
@@ -278,7 +278,7 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 	// myLog.dailyLogger.Println("get from disk:" /*filePath*/)
 	go func() {
 		c.totalIncr()
-		myLog.doLog(dailyType, "get from disk"+filePath)
+		//myLog.doLog(dailyType, "get from disk"+filePath)
 	}()
 
 	return
