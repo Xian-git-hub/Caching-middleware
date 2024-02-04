@@ -54,7 +54,7 @@ func init() {
 
 func main() {
 	exitChan = make(chan os.Signal, 1)
-	signal.Notify(exitChan, os.Interrupt)
+	signal.Notify(exitChan, os.Interrupt, os.Kill)
 
 	// 创建mylog结构体变量
 	myLog = NewMyLogger()
@@ -68,7 +68,7 @@ func main() {
 	mux.HandleFunc("/download", handleRequestFile)
 	mux.HandleFunc("/flush", handledFlush)
 
-	// myLog.dailyLogger.Println("server start! welcome")
+	fmt.Println("hahaha")
 	myLog.doLog(dailyType, "server start! welcome")
 
 	http.ListenAndServe(setting.ServerIp+setting.ServerPort, mux)
@@ -177,7 +177,7 @@ func getFile(fileName string, filePath string) (data []byte, err error) {
 			// myLog.dailyLogger.Printf("file %v has extended its ttl\n", fileName)
 			// myLog.dailyLogger.Pritln("get from redis:", filePath)
 			go func() {
-				myLog.doLog(dailyType, fileName+"has extender its ttl")
+				myLog.doLog(dailyType, fmt.Sprintf("%v has extender its ttl", fileName))
 				c.countIncr()
 				c.totalIncr()
 				myLog.doLog(dailyType, "get from redis"+filePath)
@@ -447,9 +447,10 @@ func initCounter() (c *counter) {
 	c = new(counter)
 
 	c.count = 0
-	c.total = 0
+	c.total = 1
 	c.mu = make(chan bool, 1)
-	c.cticker = time.NewTicker(8 * time.Second)
+	c.mu <- true
+	c.cticker = time.NewTicker(10 * time.Second)
 
 	return c
 }
@@ -471,16 +472,17 @@ func (c *counter) totalIncr() {
 func (c *counter) cal() string {
 
 	<-c.mu
-	ratio := c.count / c.total
+	ratio := float64(c.count) / float64(c.total)
+	ratioInt := int(ratio * 100)
 	c.mu <- true
 
-	return strconv.Itoa(ratio * 100)
+	return strconv.Itoa(ratioInt)
 }
 
 // 重置
 func (c *counter) reset() {
 	<-c.mu
 	c.count = 0
-	c.total = 0
+	c.total = 1
 	c.mu <- true
 }

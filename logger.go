@@ -24,13 +24,15 @@ import (
 const (
 	dailySecondDir = "/dailyLog/"
 	errorSecondDir = "/errorLog/"
+	dataSecondDir  = "/dataLog"
 	suffix         = ".log"
 	dailyType      = "daily"
 	errorType      = "error"
+	dataType       = "data"
 )
 
 var firstDir string
-var enable bool = true
+var enable bool = false
 
 // 一个自定义的logger结构体，包含了日常日志和错误日志
 type MyLogger struct {
@@ -147,7 +149,7 @@ func (myLog *MyLogger) setTimer() {
 
 // 设置一个8s的ticker,用于把数据flush到硬盘中
 func (myLog *MyLogger) setTicker() {
-	myLog.ticker = time.NewTicker(60 * time.Second)
+	myLog.ticker = time.NewTicker(10 * time.Second)
 }
 
 // 记录日志操作，由调用方传入使用的logger类型以及记录的字符串
@@ -155,7 +157,7 @@ func (myLog *MyLogger) setTicker() {
 func (ml *MyLogger) doLog(name string, content string) {
 	switch name {
 	case dailyType:
-		if !enable {
+		if enable {
 			break
 		}
 		<-ml.dmu
