@@ -28,11 +28,15 @@ var rdb *redis.Client       // 全局的go-redis里的redis客户端，通过这
 var myLog *MyLogger         // 全局的日志对象，用来记录日志
 var setting Settings        // 全局的参数对象，使用参数
 var exitChan chan os.Signal // 退出信号接受的channel
-var c counter
+var c *counter
 
 func init() {
 
+	// 解析配置文件中的参数
 	parseConfig()
+
+	// 初始化counter变量
+	c = initCounter()
 
 	rdb = redis.NewClient(&redis.Options{
 		Addr:     setting.RdbIp + setting.RdpPort,
@@ -439,6 +443,17 @@ func getFileSuffix(file string) (suffix string) {
 // func preload() {
 
 // }
+func initCounter() (c *counter) {
+	c = new(counter)
+
+	c.count = 0
+	c.total = 0
+	c.mu = make(chan bool, 1)
+	c.cticker = time.NewTicker(8 * time.Second)
+
+	return c
+}
+
 // 自增一
 func (c *counter) countIncr() {
 	<-c.mu
