@@ -14,26 +14,28 @@ import (
 // 全局的配置文件参数
 type Serverconfig struct {
 	Suffix     string `json:"suffix"`     // 文件的后缀
-	Prefix     string `json:"prefix"`     //文件的路径，这里命名意思为前缀
+	Prefix     string `json:"prefix"`     // 文件的路径，这里命名意思为前缀
 	ServerIp   string `json:"serverIp"`   // 服务器的地址
-	ServerPort string `json:"serverPort"` //服务器的端口
-	LoggerPath string `json:"loggerPath"` //日志文件的路径
+	ServerPort string `json:"serverPort"` // 服务器的端口
+	LoggerPath string `json:"loggerPath"` // 日志文件的路径
+	FlushTime  int    `json:"flushtime"`  // 刷新一次日志的时间，单位为秒
+	CalTime    int    `json:"caltime"`    // 输出一次统计数据的时间，单位为秒
 }
 
 // redis数据库配置文件仓库
 type RDBConfig struct {
 	RdbIp        string `json:"rdpIp"`        // redis数据库ip地址
 	RdpPort      string `json:"rdpPort"`      // redis数据库端口
-	PassWord     string `json:"password"`     //redis数据库密码
-	DB           int    `json:"db"`           //启用的数据库(桶)
-	PoolSize     int    `json:"poolSize"`     //连接池最大连接数
-	MinIdleConns int    `json:"minIdleConns"` //最小空闲连接数
-	MaxIdleConns int    `json:"maxIdleConns"` //最大空闲连接数
-	PoolTimeout  int    `json:"poolTimeOut"`  //等待连接最大时间
-	LoadCount    int    `json:"loadCount"`    //需要缓存的访问次数
-	ExtendCount  int    `json:"extendCount"`  //需要延长存活时间的次数
-	TTL          int    `json:"ttl"`          //文件第一次缓存的存活时间，单位为分钟
-	HotTTL       int    `json:"hotttl"`       //热点数据的存活时间，单位为分钟
+	PassWord     string `json:"password"`     // redis数据库密码
+	DB           int    `json:"db"`           // 启用的数据库(桶)
+	PoolSize     int    `json:"poolSize"`     // 连接池最大连接数
+	MinIdleConns int    `json:"minIdleConns"` // 最小空闲连接数
+	MaxIdleConns int    `json:"maxIdleConns"` // 最大空闲连接数
+	PoolTimeout  int    `json:"poolTimeOut"`  // 等待连接最大时间
+	LoadCount    int    `json:"loadCount"`    // 需要缓存的访问次数
+	ExtendCount  int    `json:"extendCount"`  // 需要延长存活时间的次数
+	TTL          int    `json:"ttl"`          // 文件第一次缓存的存活时间，单位为分钟
+	HotTTL       int    `json:"hotttl"`       // 热点数据的存活时间，单位为分钟
 
 }
 

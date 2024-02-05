@@ -3,5 +3,6 @@
     "prefix": "./file/",
     "serverIp": "0.0.0.0",
     "serverPort":":8080",
-    "loggerPath":"./log"
+    "loggerPath":"./log",
+    "flushtime":"10"
 }

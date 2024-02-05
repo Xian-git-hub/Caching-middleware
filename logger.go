@@ -127,7 +127,7 @@ func (myLog *MyLogger) Listener() {
 			closeSource()
 			os.Exit(0)
 
-		// 计算信号
+		// 计算统计数据信号
 		case <-c.cticker.C:
 			ratio := c.cal()
 			myLog.doLog(dailyType, "redis:"+ratio+"%")
@@ -149,7 +149,7 @@ func (myLog *MyLogger) setTimer() {
 
 // 设置一个8s的ticker,用于把数据flush到硬盘中
 func (myLog *MyLogger) setTicker() {
-	myLog.ticker = time.NewTicker(10 * time.Second)
+	myLog.ticker = time.NewTicker(time.Duration(setting.FlushTime) * time.Second)
 }
 
 // 记录日志操作，由调用方传入使用的logger类型以及记录的字符串
